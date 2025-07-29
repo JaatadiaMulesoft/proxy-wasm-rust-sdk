@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::alloc;
+use std::alloc::Layout;
 use crate::dispatcher;
 use crate::types::*;
 use std::ptr::{null, null_mut};
@@ -152,8 +154,10 @@ pub fn get_map(map_type: MapType) -> Result<Vec<(String, String)>, Status> {
         match proxy_get_header_map_pairs(map_type, &mut return_data, &mut return_size) {
             Status::Ok => {
                 if !return_data.is_null() {
-                    let serialized_map = Vec::from_raw_parts(return_data, return_size, return_size);
-                    Ok(utils::deserialize_map(&serialized_map))
+                    let serialized_map = std::slice::from_raw_parts(return_data, return_size);
+                    let deserialized_map = utils::deserialize_map(serialized_map);
+                    alloc::dealloc(return_data, Layout::new::<u8>());
+                    Ok(deserialized_map)
                 } else {
                     Ok(Vec::new())
                 }
@@ -170,8 +174,10 @@ pub fn get_map_bytes(map_type: MapType) -> Result<Vec<(String, Bytes)>, Status> 
         match proxy_get_header_map_pairs(map_type, &mut return_data, &mut return_size) {
             Status::Ok => {
                 if !return_data.is_null() {
-                    let serialized_map = Vec::from_raw_parts(return_data, return_size, return_size);
-                    Ok(utils::deserialize_map_bytes(&serialized_map))
+                    let serialized_map = std::slice::from_raw_parts(return_data, return_size);
+                    let deserialized_map = utils::deserialize_map_bytes(serialized_map);
+                    alloc::dealloc(return_data, Layout::new::<u8>());
+                    Ok(deserialized_map)
                 } else {
                     Ok(Vec::new())
                 }
